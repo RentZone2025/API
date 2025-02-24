@@ -83,15 +83,18 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            if ($user->two_factor_secret == null) {
-                return $this->auth($user);
-            } else {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'You need 2FA authentication!',
-                    '2fa' => true,
-                ], 200);
+            if (!$user->two_factor_secret) {
+                return $this->completeLogin($user);
             }
+
+            // Store user ID in session for 2FA verification
+            session(['2fa_user_id' => $user->id]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'You need 2FA authentication!',
+                '2fa' => true,
+            ], 200);
 
         } catch (ValidationException $e) {
             return response()->json([
@@ -102,16 +105,22 @@ class AuthController extends Controller
         }
     }
 
-    public function verify_2FA(Request $request)
+    public function verify2FA(Request $request)
     {
-
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+        $request->validate([
+            'two_factor_code' => ['required', 'string'],
         ]);
-        Auth::attempt($credentials);
 
-        $user = Auth::user();
+        $userId = session('2fa_user_id');
+
+        if (!$userId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid session. Please login again.'
+            ], 401);
+        }
+
+        $user = User::find($userId);
         $google2fa = new Google2FA();
 
         $valid = $google2fa->verifyKey(
@@ -120,7 +129,9 @@ class AuthController extends Controller
         );
 
         if ($valid) {
-            return $this->auth($user);
+            session()->forget('2fa_user_id');
+            Auth::attempt(['email' => $user->email, 'password' => $user->password]);
+            return $this->completeLogin($user);
         } else {
             return response()->json([
                 'status' => 'error',
@@ -129,17 +140,29 @@ class AuthController extends Controller
         }
     }
 
-    public function activate_2FA()
+    private function completeLogin($user)
+    {
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Login successful',
+            "user" => $user,
+            'access_token' => $token
+        ]);
+    }
+
+    public function setup2FA()
     {
         try {
             $user = Auth::user();
             $google2fa = new Google2FA(new Bacon());
             $secretKey = $google2fa->generateSecretKey();
 
-            $user->two_factor_secret = $secretKey;
-            $user->save();
+            // Store the secret key in the session temporarily
+            session(['temp_2fa_secret' => $secretKey]);
 
-            $qr_image = $google2fa->getQRCodeInline(
+            $qrCode = $google2fa->getQRCodeInline(
                 config('app.name'),
                 $user->email,
                 $secretKey
@@ -147,9 +170,9 @@ class AuthController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => '2FA has been activated',
+                'message' => '',
                 'secret_key' => $secretKey,
-                'qr_image' => $qr_image
+                'qr_code' => $qrCode
             ], 200);
 
         } catch (Google2FAException $e) {
@@ -160,7 +183,44 @@ class AuthController extends Controller
         }
     }
 
-    public function deactivate_2FA()
+    public function verifySetup2FA(Request $request)
+    {
+        $request->validate([
+            'two_factor_code' => ['required', 'string'],
+        ]);
+
+        $user = Auth::user();
+        $google2fa = new Google2FA();
+        $secretKey = session('temp_2fa_secret');
+
+        if (!$secretKey) {
+            return response()->json([
+                'status' => 'error',
+                'message' => '2FA setup not initiated',
+            ], 400);
+        }
+
+        if (!$google2fa->verifyKey($secretKey, $request->two_factor_code)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid 2FA code',
+            ], 401);
+        }
+
+        $user->two_factor_secret = $secretKey;
+        $user->save();
+
+        // Clear the temporary secret from the session
+        session()->forget('temp_2fa_secret');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => '2FA setup verified and enabled',
+        ], 200);
+    }
+
+
+    public function deactivate2FA()
     {
         $user = Auth::user();
         $user->two_factor_secret = null;
