@@ -91,7 +91,7 @@ class AuthController extends Controller
             session(['2fa_user_id' => $user->id]);
 
             return response()->json([
-                'status' => 'success',
+                'status' => '2fa_required',
                 'message' => 'You need 2FA authentication!',
                 '2fa' => true,
             ], 200);
