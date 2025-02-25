@@ -10,6 +10,7 @@ use Illuminate\Validation\ValidationException;
 // user model
 use App\Models\User;
 
+use Log;
 use PragmaRX\Google2FAQRCode\Google2FA;
 use PragmaRX\Google2FAQRCode\QRCode\Bacon;
 use PragmaRX\Google2FA\Exceptions\Google2FAException;
@@ -24,8 +25,6 @@ class AuthController extends Controller
                 'fullname' => ['required', 'string', 'max:255'],
                 "username" => ["required", "string", "max:255", 'unique:users'],
                 'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-                'phone_number' => ['required', 'string', 'max:20', "unique:users"],
-                'birthdate' => ['required', 'string'],
                 'password' => ['required', 'string', 'min:8', 'confirmed'],
             ]);
 
@@ -33,8 +32,6 @@ class AuthController extends Controller
                 'fullname' => $validatedData['fullname'],
                 'username' => $validatedData['username'],
                 'email' => $validatedData['email'],
-                'phone_number' => $validatedData['phone_number'],
-                'birthdate' => $validatedData['birthdate'],
                 'password' => Hash::make($validatedData['password']),
             ]);
 
@@ -54,16 +51,6 @@ class AuthController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         }
-    }
-
-    public function auth($user)
-    {
-        $token = $user->createToken('auth_token')->plainTextToken;
-        return response()->json([
-            'status' => 'success',
-            'user' => $user,
-            'access_token' => $token,
-        ], 200);
     }
 
     public function login(Request $request)
@@ -87,12 +74,10 @@ class AuthController extends Controller
                 return $this->completeLogin($user);
             }
 
-            // Store user ID in session for 2FA verification
-            session(['2fa_user_id' => $user->id]);
-
             return response()->json([
                 'status' => '2fa_required',
                 'message' => 'You need 2FA authentication!',
+                'user_id' => $user->id,
                 '2fa' => true,
             ], 200);
 
@@ -109,9 +94,10 @@ class AuthController extends Controller
     {
         $request->validate([
             'two_factor_code' => ['required', 'string'],
+            'user_id' => ['required', 'integer'],
         ]);
 
-        $userId = session('2fa_user_id');
+        $userId = $request->user_id ?? null;
 
         if (!$userId) {
             return response()->json([
@@ -156,11 +142,16 @@ class AuthController extends Controller
     {
         try {
             $user = Auth::user();
+
+            if ($user->two_factor_secret) {
+                return response()->json([
+                    'status' => 'already_enabled',
+                    'message' => '2FA is already enabled for this user',
+                ], 400);
+            }
+
             $google2fa = new Google2FA(new Bacon());
             $secretKey = $google2fa->generateSecretKey();
-
-            // Store the secret key in the session temporarily
-            session(['temp_2fa_secret' => $secretKey]);
 
             $qrCode = $google2fa->getQRCodeInline(
                 config('app.name'),
@@ -187,11 +178,12 @@ class AuthController extends Controller
     {
         $request->validate([
             'two_factor_code' => ['required', 'string'],
+            'two_factor_secret' => ['required', 'string'],
         ]);
 
         $user = Auth::user();
         $google2fa = new Google2FA();
-        $secretKey = session('temp_2fa_secret');
+        $secretKey = $request->two_factor_secret ?? null;
 
         if (!$secretKey) {
             return response()->json([
