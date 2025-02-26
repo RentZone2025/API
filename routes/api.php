@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 Route::controller(AuthController::class)->group(function () {
     Route::post('login', 'login')->name('login');
     Route::post('register', 'register')->name('register');
+    Route::post('forgot-password', 'forgotPassword')->name('forgotPassword');
+    Route::post('reset-password', 'resetPassword')->name('resetPassword');
     Route::post('2fa/verify', 'verify2FA')->name('verify2FA');
     
     //Route::post('login', 'postLogin')->name('login.post');

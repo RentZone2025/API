@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+use App\Notifications\CustomResetPasswordNotification;
+
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -58,4 +60,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Rent::class);
     }
+
+    public function sendPasswordResetNotification($token)
+    {
+        $userId = $this->id; // vagy bármilyen egyedi azonosító
+        $encodedUserId = base64_encode($userId);
+        $url = "http://localhost:4200/reset-password?token={$token}&id={$encodedUserId}";
+        $this->notify(new CustomResetPasswordNotification($url));
+    }    
 }

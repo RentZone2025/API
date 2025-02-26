@@ -10,10 +10,16 @@ use Illuminate\Validation\ValidationException;
 // user model
 use App\Models\User;
 
-use Log;
+use Illuminate\Support\Facades\Password;
 use PragmaRX\Google2FAQRCode\Google2FA;
 use PragmaRX\Google2FAQRCode\QRCode\Bacon;
 use PragmaRX\Google2FA\Exceptions\Google2FAException;
+
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Validation\Rules\Password as PasswordRules;
+use Str;
+use DB;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -89,6 +95,79 @@ class AuthController extends Controller
             ], 422);
         }
     }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Jelszó visszaállítási link elküldve az email címére.',
+            ], 200);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Nem sikerült elküldeni a jelszó visszaállítási linket. Kérjük, próbálja újra később.',
+            ], 400);
+        }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'id' => 'required', // Az encodedUserId
+            'password' => ['required', 'confirmed', PasswordRules::defaults()],
+        ]);
+
+        // Dekódoljuk a user ID-t
+        $userId = base64_decode($request->id);
+
+        $email = DB::table('users')->where('id', $userId)->value('email');
+
+        // Keressük meg a token-hez és user ID-hez tartozó bejegyzést
+        $tokenData = DB::table('password_reset_tokens')
+            ->where('email', $email)
+            ->first();
+
+        //return response()->json(['message' => $tokenData->created_at], 400);
+
+        if (!Hash::check($request->token, $tokenData->token)) {
+            return response()->json(['message' => 'Érvénytelen token.'], 400);
+        }
+
+        // Ellenőrizzük a token érvényességét
+        if (Carbon::parse($tokenData->created_at)->addMinutes(60)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+            return response()->json(['message' => 'A token lejárt.'], 400);
+        }
+
+        // Keressük meg a felhasználót az ID alapján
+        $user = User::find($userId);
+
+        if (!$user) {
+            return response()->json(['message' => 'Felhasználó nem található.'], 404);
+        }
+
+        // Állítsuk vissza a jelszót
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        // Töröljük a felhasznált tokent
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+
+        event(new PasswordReset($user));
+
+        return response()->json(['message' => 'Jelszó sikeresen visszaállítva.'], 200);
+    }
+
 
     public function verify2FA(Request $request)
     {
