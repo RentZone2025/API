@@ -29,10 +29,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(UserController::class)->group(function () {
         Route::put('users/{id}', 'update')->name('update');
         Route::post('users/change-password', 'changePassword')->name('changePassword');
+        Route::post('users/change-billing', 'changeBilling')->name('changeBilling');
+        Route::post('users/change-shipping', 'changeShipping')->name('changeShipping');
     });
     
 });
 
 Route::get('/user', function (Request $request) {
-    return $request->user();
+
+    $user = $request->user()->loadMissing(['shipping', 'billing']);
+    
+    return [
+        'user' => $user,
+        'shipping' => $user->shipping->makeHidden(['created_at', 'updated_at']),
+        'billing' => $user->billing->makeHidden(['created_at', 'updated_at']),
+    ];
 })->middleware('auth:sanctum');

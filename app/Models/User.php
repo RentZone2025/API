@@ -61,6 +61,16 @@ class User extends Authenticatable
         return $this->hasMany(Rent::class);
     }
 
+    public function shipping()
+    {
+        return $this->hasOne(ShippingDetail::class);
+    }
+
+    public function billing()
+    {
+        return $this->hasOne(BillingDetail::class);
+    }
+
     public function sendPasswordResetNotification($token)
     {
         $userId = $this->id; // vagy bármilyen egyedi azonosító

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\BillingDetail;
+use App\Models\ShippingDetail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
@@ -50,6 +52,43 @@ class UserController extends Controller
         return response()->json(['message' => 'A jelszó sikeresen megváltoztatva.'], 200);
     }
 
+    public function changeBilling(Request $request)
+    {
+        $user = Auth::user();
+    
+        $validated = $request->validate([
+            'country' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+            'postal_code' => 'required|string|max:20',
+        ]);
+    
+        $billing = BillingDetail::updateOrCreate(
+            ['user_id' => $user->id],
+            $validated
+        )->makeHidden(['created_at', 'updated_at']);
+    
+        return response()->json(['message' => 'Billing details updated successfully', 'billing' => $billing]);
+    }
+    
+    public function changeShipping(Request $request)
+    {
+        $user = Auth::user();
+    
+        $validated = $request->validate([
+            'country' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+            'postal_code' => 'required|string|max:20',
+        ]);
+    
+        $shipping = ShippingDetail::updateOrCreate(
+            ['user_id' => $user->id],
+            $validated
+        )->makeHidden(['created_at', 'updated_at']);
+    
+        return response()->json(['message' => 'Shipping details updated successfully', 'shipping' => $shipping]);
+    }
 
     /**
      * Remove the specified resource from storage.
