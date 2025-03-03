@@ -9,6 +9,8 @@ use App\Models\BillingDetail;
 use App\Models\ShippingDetail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Log;
+use Symfony\Component\ErrorHandler\Debug;
 
 class UserController extends Controller
 {
@@ -73,6 +75,9 @@ class UserController extends Controller
     
     public function changeShipping(Request $request)
     {
+
+        Log::debug($request);
+
         $user = Auth::user();
     
         $validated = $request->validate([

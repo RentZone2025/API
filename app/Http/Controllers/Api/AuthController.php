@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 // user model
 use App\Models\User;
+use App\Notifications\VerifyEmailNotification;
 
 use Illuminate\Support\Facades\Password;
 use PragmaRX\Google2FAQRCode\Google2FA;
@@ -41,13 +42,15 @@ class AuthController extends Controller
                 'password' => Hash::make($validatedData['password']),
             ]);
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            //$token = $user->createToken('auth_token')->plainTextToken;
+
+            $user->sendEmailVerificationNotification();
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Felhasználó sikeresen regisztrálva.',
                 'user' => $user,
-                'access_token' => $token,
+                //'access_token' => $token,
             ], 201);
 
         } catch (ValidationException $e) {
@@ -75,6 +78,13 @@ class AuthController extends Controller
             }
 
             $user = Auth::user();
+
+            if (!auth()->user()->hasVerifiedEmail()) {
+                return response()->json([
+                    'status'=> 'error',
+                    'message'=> 'Email not verified! Please check your mailbox!'
+                    ],500);
+            }
 
             if (!$user->two_factor_secret) {
                 return $this->completeLogin($user);
@@ -166,6 +176,23 @@ class AuthController extends Controller
         event(new PasswordReset($user));
 
         return response()->json(['message' => 'Jelszó sikeresen visszaállítva.'], 200);
+    }
+
+    public function verifyEmail(Request $request)
+    {
+        $user = User::find($request->route('id'));
+
+        if (!hash_equals((string) $request->route('hash'), sha1($user->getEmailForVerification()))) {
+            return response()->json(['message' => 'Invalid verification link'], 403);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified'], 200);
+        }
+
+        $user->markEmailAsVerified();
+
+        return response()->json(['message' => 'Email verified successfully'], 200);
     }
 
 

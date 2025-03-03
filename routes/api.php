@@ -13,6 +13,8 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('forgot-password', 'forgotPassword')->name('forgotPassword');
     Route::post('reset-password', 'resetPassword')->name('resetPassword');
     Route::post('2fa/verify', 'verify2FA')->name('verify2FA');
+
+    Route::post('/email/verify/{id}/{hash}', "verifyEmail")->name('verifyEmail');
     
     //Route::post('login', 'postLogin')->name('login.post');
 
@@ -25,6 +27,7 @@ Route::controller(AuthController::class)->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('rents/archives', [RentController::class,'getArchives'])->name('getArchives');
     Route::resource('rents', RentController::class);
     Route::controller(UserController::class)->group(function () {
         Route::put('users/{id}', 'update')->name('update');
@@ -41,7 +44,7 @@ Route::get('/user', function (Request $request) {
     
     return [
         'user' => $user,
-        'shipping' => $user->shipping->makeHidden(['created_at', 'updated_at']),
-        'billing' => $user->billing->makeHidden(['created_at', 'updated_at']),
+        'shipping' => $user->shipping ? $user->shipping->makeHidden(['created_at', 'updated_at']) :  null, 
+        'billing' => $user->billing ? $user->billing->makeHidden(['created_at', 'updated_at']) : null,
     ];
 })->middleware('auth:sanctum');

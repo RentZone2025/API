@@ -17,6 +17,13 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('device_id');
             $table->integer('rent_period');
+            $table->date('delevery_date')->default(null);
+            $table->date('back_date')->default(null);
+            $table->string("status")->default("feldolgozás");
+            $table->integer('sum_price');
+            $table->integer('sale')->default(0); 
+            $table->boolean('is_free_shipping')->default(false);
+            $table->boolean('is_free_deposit')->default(false); 
             $table->timestamps();
             $table->softDeletes();
 
