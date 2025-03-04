@@ -6,6 +6,10 @@ use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+use Stripe\Stripe;
+use Stripe\Price;
+use Stripe\Product;
+
 // auth
 Route::controller(AuthController::class)->group(function () {
     Route::post('login', 'login')->name('login');
@@ -35,6 +39,43 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('users/change-billing', 'changeBilling')->name('changeBilling');
         Route::post('users/change-shipping', 'changeShipping')->name('changeShipping');
     });
+
+    Route::get('/subscriptions', function () {
+
+        Stripe::setApiKey(env('STRIPE_SECRET'));
+
+        $prices = Price::all(['limit' => 100]); 
+    
+        $subscriptions = [];
+        foreach ($prices->data as $price) {
+
+            $product = Product::retrieve($price->product); // Kapcsolódó termék lekérése
+    
+            $subscriptions[] = [
+                'id' => $price->id,
+                'name' => $product->name,
+                'description' => $product->description ?? '',
+                'price' => $price->unit_amount / 100, // Árat centből átváltjuk normál pénznemre
+                'currency' => strtoupper($price->currency),
+                'interval' => $price->recurring ? $price->recurring->interval : 'one-time',
+            ];
+        }
+    
+        return response()->json($subscriptions);
+    });
+
+    Route::get('/subscription-checkout', function (Request $request) {
+        $checkoutSession = $request->user()
+            ->newSubscription('default', 'price_1QyqpA2cS1c6Ngi1z8BYBvHA')
+            ->allowPromotionCodes()
+            ->checkout([
+                'success_url' => "https://localhost:4200/success-subscription",
+                'cancel_url' => "https://localhost:4200/cancel-subscription",
+            ]);
+    
+        return response()->json(['url' => $checkoutSession->url]);
+    });
+    
     
 });
 
