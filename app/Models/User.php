@@ -82,8 +82,8 @@ class User extends Authenticatable implements MustVerifyEmail
         $encodedUserId = base64_encode($userId);
         $url = "http://localhost:4200/reset-password?token={$token}&id={$encodedUserId}";
         $this->notify(new CustomResetPasswordNotification($url));
-    } 
-    
+    }
+
     public function sendEmailVerificationNotification()
     {
         $verificationUrl = URL::temporarySignedRoute(
@@ -91,19 +91,19 @@ class User extends Authenticatable implements MustVerifyEmail
             now()->addMinutes(60),
             ['id' => $this->getKey(), 'hash' => sha1($this->getEmailForVerification())]
         );
-    
+
         $parsedUrl = parse_url($verificationUrl);
         $query = [];
         parse_str($parsedUrl['query'] ?? '', $query);
-    
+
         $frontendUrl = config('app.frontend_url') . '/email-verification/verify?' . http_build_query([
             'id' => $this->getKey(),
             'hash' => sha1($this->getEmailForVerification()),
             'expires' => $query['expires'],
             'signature' => $query['signature'],
         ]);
-    
+
         $this->notify(new VerifyEmailNotification($frontendUrl));
     }
-    
+
 }
