@@ -10,10 +10,79 @@ use App\Models\ShippingDetail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Log;
-use Symfony\Component\ErrorHandler\Debug;
+
+use Stripe\Stripe;
+use Stripe\Price;
+use Stripe\Product;
 
 class UserController extends Controller
 {
+
+    public function index(Request $request){
+
+        \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
+
+        $user = $request->user()->loadMissing(['shipping', 'billing']);
+    
+        // Ellenőrizzük, hogy van-e aktív előfizetés
+        $subscription = $user->subscription();
+    
+        if ($subscription) {
+    
+            // Ellenőrizzük, hogy vannak-e tételek az előfizetésben
+            if (!$subscription->items || count($subscription->items) === 0) {
+                return response()->json(['error' => 'No items found in subscription'], 404);
+            }
+    
+            // Biztonságosan lekérjük az első tétel stripe_product azonosítóját
+            $product_id = optional($subscription->items->first())->stripe_product;
+    
+            if ($product_id) {
+    
+                try {
+                    $product = Product::retrieve($product_id);
+                } catch (\Exception $e) {
+                    return response()->json(['error' => 'Product not found: ' . $e->getMessage()], 404);
+                }
+    
+                if ($product->description) {
+                    $product->benefits = explode(" - ", $product->description);
+                }
+    
+                // price lekérése
+                $price_id = optional($subscription->items->first())->stripe_price;
+    
+                if (!$price_id) {
+                    return response()->json(['error' => 'No price found in subscription'], 404);
+                }
+    
+                try {
+                    $price = Price::retrieve($price_id);
+                } catch (\Exception $e) {
+                    return response()->json(['error' => 'Price not found: ' . $e->getMessage()], 404);
+                }
+    
+                $data = [
+                    "subscription" => $subscription,
+                    "product" => $product,
+                    "price" => $price,
+                ];
+    
+            } else {
+                $data = null;
+            }
+    
+        } else {
+            $data = null;
+        }
+    
+        return response()->json([
+            'user' => $user,
+            'subscription' => $data,
+            'shipping' => $user->shipping ? $user->shipping->makeHidden(['created_at', 'updated_at']) : null,
+            'billing' => $user->billing ? $user->billing->makeHidden(['created_at', 'updated_at']) : null,
+        ]);
+    }
 
     /**
      * Update the specified resource in storage.

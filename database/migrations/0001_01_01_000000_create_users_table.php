@@ -20,6 +20,7 @@ return new class extends Migration
             $table->date('birthdate')->nullable();
             $table->string('password',255);
             $table->string('two_factor_secret')->nullable();
+            $table->string('role', 20)->default('user');
             $table->timestamp('last_login')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
