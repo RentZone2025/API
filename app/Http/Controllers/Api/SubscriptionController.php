@@ -92,11 +92,11 @@ class SubscriptionController extends Controller
         ]);
 
         $checkoutSession = $request->user()
-            ->newSubscription('default', $validated['price_id'])
+            ->newSubscription(env('APP_NAME', 'Subscription'), $validated['price_id'])
             ->allowPromotionCodes()
             ->checkout([
-                'success_url' => $frontend_url . "/success-subscription?session_id={CHECKOUT_SESSION_ID}",
-                'cancel_url' => $frontend_url . "/cancel-subscription",
+                'success_url' => $frontend_url . "/user/success-subscription?session_id={CHECKOUT_SESSION_ID}",
+                'cancel_url' => $frontend_url . "/user/cancel-subscription",
             ]);
 
         return response()->json([

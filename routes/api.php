@@ -52,6 +52,10 @@ Route::middleware('auth:sanctum')->group(function () {
             // INVOICE
             Route::get('/subscriptions/invoices', 'getAllInvoices')->name('getAllInvoices');
             Route::get('/subscriptions/invoices/{id}', 'getInvoice')->name('getInvoice');
+
+            // SUBSCRIPTION
+            Route::get('/subscriptions/subscriptions', 'getAllSubscriptions')->name('getAllSubscriptions');
+            Route::get('/subscriptions/subscriptions/{id}', 'getSubscription')->name('getSubscription');
         });
     });
 });

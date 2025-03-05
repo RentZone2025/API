@@ -74,4 +74,28 @@ class AdminStripeController extends Controller
         return response()->json($invoice);
     }
 
+    // #############################
+    // SUBSCRIPTION
+    // #############################
+
+    public function getAllSubscriptions()
+    {
+        $subscriptions = \Stripe\Subscription::all();
+
+        foreach ($subscriptions as $subscription) {
+            $subscription->customer_details = \Stripe\Customer::retrieve($subscription->customer);
+            $subscription->plan->product_details = \Stripe\Product::retrieve($subscription->plan->product);
+        }
+
+        return response()->json($subscriptions);
+    }
+
+    public function getSubscription($id)
+    {
+        $subscription = \Stripe\Subscription::retrieve($id);
+        $subscription->customer_details = \Stripe\Customer::retrieve($subscription->customer);
+        $subscription->plan->product_details = \Stripe\Product::retrieve($subscription->plan->product);
+        return response()->json($subscription);
+    }
+
 }
