@@ -48,6 +48,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/subscriptions/plans', 'createPlan')->name('createPlan');
             Route::get('/subscriptions/plans/{id}', 'getPlan')->name('getPlan');
             Route::get('/subscriptions/prices/{id}', 'getPrice')->name('getPrice');
+
+            // INVOICE
+            Route::get('/subscriptions/invoices', 'getAllInvoices')->name('getAllInvoices');
+            Route::get('/subscriptions/invoices/{id}', 'getInvoice')->name('getInvoice');
         });
     });
 });
