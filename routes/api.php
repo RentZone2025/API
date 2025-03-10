@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\AdminStripeController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\RentController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\SubscriptionController;
@@ -38,6 +39,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/subscriptions/plans', [SubscriptionController::class, 'getSubscriptionPlans']);
     Route::post('/subscriptions/create-checkout-session', [SubscriptionController::class, 'createCheckoutSession']);
     Route::post('/subscriptions/', [SubscriptionController::class, 'saveSubscription']);
+
+    Route::post('/payments/create-checkout-session', [PaymentController::class, 'createCheckoutSession']);
 
     // ######
     // ADMIN

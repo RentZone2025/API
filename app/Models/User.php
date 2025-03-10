@@ -12,6 +12,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Facades\URL;
 
 use Laravel\Cashier\Billable;
+use Laravel\Cashier\Subscription;
 
 use App\Notifications\CustomResetPasswordNotification;
 
@@ -21,6 +22,7 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasApiTokens, HasFactory, Notifiable, Billable;
 
     protected $table = "users";
+    protected $appends = ['has_subscription'];
 
     /**
      * The attributes that are mass assignable.
@@ -74,6 +76,18 @@ class User extends Authenticatable implements MustVerifyEmail
     public function billing()
     {
         return $this->hasOne(BillingDetail::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function getHasSubscriptionAttribute()
+    {
+        return $this->subscriptions()
+            ->where('stripe_status', 'active')
+            ->exists(); // Ha van aktív előfizetés, akkor true, egyébként false
     }
 
     public function sendPasswordResetNotification($token)

@@ -25,7 +25,7 @@ class UserController extends Controller
         $user = $request->user()->loadMissing(['shipping', 'billing']);
     
         // Ellenőrizzük, hogy van-e aktív előfizetés
-        $subscription = $user->subscription();
+        $subscription = $request->user()->subscription();
     
         if ($subscription) {
     

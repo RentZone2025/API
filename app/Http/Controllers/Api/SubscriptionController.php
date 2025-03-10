@@ -134,6 +134,7 @@ class SubscriptionController extends Controller
 
                 $products[] = [
                     'product_name' => $product->name,
+                    'metadata' => $product->metadata,
                     'price' => $item->price->unit_amount / 100, // Árat centből átváltjuk
                     'currency' => strtoupper($item->price->currency),
                     'interval_count' => $item->price->recurring ? $item->price->recurring->interval_count : 1,
@@ -145,6 +146,7 @@ class SubscriptionController extends Controller
             $subscription = $user->subscriptions()->updateOrCreate(
                 ['stripe_id' => $stripeSubscription->id],
                 [
+                    //'type' => $products[0]['metadata']->type,
                     'type' => 'default',
                     'stripe_status' => $stripeSubscription->status,
                     'stripe_price' => $stripeSubscription->items->data[0]->price->id ?? null,
