@@ -92,11 +92,11 @@ class PaymentController extends Controller
                 }
             }
         }
-        return $subscription;
+        //return $subscription;
 
         // 🔹 Ha a user előfizető, akkor kupon alkalmazása
         $discounts = [];
-        if ($user->subscription()->product->metadata->type == "gold") { 
+        if ($user->subscription() != null && $user->subscription()->product->metadata->type == "gold") { 
             $discounts[] = [
                 'coupon' => 'cC0V0xEg', // ⚠️ Itt a Stripe-ban lévő kupon kódját kell megadni
             ];
