@@ -105,6 +105,7 @@ class PaymentController extends Controller
         $session = Session::create([
             'payment_method_types' => ['card'],
             'line_items' => $lineItems,
+            "customer_email" => "komaromijano2002@gmail.com",
             'mode' => 'payment',
             'discounts' => $discounts, // 🎯 Itt alkalmazzuk a kuponkedvezményt!
             'success_url' => $frontend_url . '/user/rent-confirm?session_id={CHECKOUT_SESSION_ID}',
