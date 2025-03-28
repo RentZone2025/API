@@ -70,6 +70,14 @@ class AuthController extends Controller
                 'password' => ['required'],
             ]);
 
+            $is_trashed_user = User::withTrashed()->where('email', $request->input('email'))->first() ? true : false;
+            if ($is_trashed_user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'A fiókja fel lett függesztve. Kérjük, vegye fel a kapcsolatot az ügyfélszolgálattal.'
+                ], 401);
+            }
+
             if (!Auth::attempt($credentials)) {
                 return response()->json([
                     'status' => 'error',

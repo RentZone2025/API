@@ -18,64 +18,65 @@ use Stripe\Product;
 class UserController extends Controller
 {
 
-    public function index(Request $request){
+    public function index(Request $request)
+    {
 
         \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
 
         $user = $request->user()->loadMissing(['shipping', 'billing']);
-    
+
         // Ellenőrizzük, hogy van-e aktív előfizetés
         $subscription = $request->user()->subscription();
-    
+
         if ($subscription) {
-    
+
             // Ellenőrizzük, hogy vannak-e tételek az előfizetésben
             if (!$subscription->items || count($subscription->items) === 0) {
                 return response()->json(['error' => 'No items found in subscription'], 404);
             }
-    
+
             // Biztonságosan lekérjük az első tétel stripe_product azonosítóját
             $product_id = optional($subscription->items->first())->stripe_product;
-    
+
             if ($product_id) {
-    
+
                 try {
                     $product = Product::retrieve($product_id);
                 } catch (\Exception $e) {
                     return response()->json(['error' => 'Product not found: ' . $e->getMessage()], 404);
                 }
-    
+
                 if ($product->description) {
                     $product->benefits = explode(" - ", $product->description);
                 }
-    
+
                 // price lekérése
                 $price_id = optional($subscription->items->first())->stripe_price;
-    
+
                 if (!$price_id) {
                     return response()->json(['error' => 'No price found in subscription'], 404);
                 }
-    
+
                 try {
                     $price = Price::retrieve($price_id);
                 } catch (\Exception $e) {
                     return response()->json(['error' => 'Price not found: ' . $e->getMessage()], 404);
                 }
-    
+
                 $data = [
                     "subscription" => $subscription,
                     "product" => $product,
                     "price" => $price,
                 ];
-    
+
             } else {
                 $data = null;
             }
-    
+
         } else {
             $data = null;
         }
-    
+
         return response()->json([
             'user' => $user,
             'subscription' => $data,
@@ -126,42 +127,54 @@ class UserController extends Controller
     public function changeBilling(Request $request)
     {
         $user = Auth::user();
-    
+
         $validated = $request->validate([
             'country' => 'required|string|max:255',
             'city' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'postal_code' => 'required|string|max:20',
         ]);
-    
+
         $billing = BillingDetail::updateOrCreate(
             ['user_id' => $user->id],
             $validated
         )->makeHidden(['created_at', 'updated_at']);
-    
+
         return response()->json(['message' => 'Billing details updated successfully', 'billing' => $billing]);
     }
-    
+
     public function changeShipping(Request $request)
     {
 
         Log::debug($request);
 
         $user = Auth::user();
-    
+
         $validated = $request->validate([
             'country' => 'required|string|max:255',
             'city' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'postal_code' => 'required|string|max:20',
         ]);
-    
+
         $shipping = ShippingDetail::updateOrCreate(
             ['user_id' => $user->id],
             $validated
         )->makeHidden(['created_at', 'updated_at']);
-    
+
         return response()->json(['message' => 'Shipping details updated successfully', 'shipping' => $shipping]);
+    }
+
+    public function suspend()
+    {
+
+        $user = Auth::user();
+
+        // delete profile
+        $user = User::findOrFail($user->id);
+        $user->delete();
+
+        return response()->json(null, 204);
     }
 
     /**
@@ -169,6 +182,10 @@ class UserController extends Controller
      */
     public function destroy(string $id)
     {
-        // REMOVE ACCOUNT
+        // delete profile
+        $user = User::findOrFail($id);
+        $user->forceDelete();
+
+        return response()->json(null, 204);
     }
 }

@@ -34,6 +34,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('users/change-password', 'changePassword')->name('changePassword');
         Route::post('users/change-billing', 'changeBilling')->name('changeBilling');
         Route::post('users/change-shipping', 'changeShipping')->name('changeShipping');
+        // suspend user
+        Route::post('users/suspend', 'suspend')->name('suspend');
+        Route::delete('users/{id}', 'destroy')->name('destroy');
     });
 
     Route::get('/subscriptions/plans', [SubscriptionController::class, 'getSubscriptionPlans']);
