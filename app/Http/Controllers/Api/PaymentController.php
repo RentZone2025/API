@@ -115,4 +115,18 @@ class PaymentController extends Controller
         return response()->json(['url' => $session->url]);
     }
 
+    public function saveOrder(Request $request)
+    {
+        Stripe::setApiKey(env('STRIPE_SECRET'));
+
+        $session = Session::retrieve($request->session_id);
+
+        // request order items
+        $orderItems = $request->orderItems;
+
+        return response()->json(['success' => true]);
+
+    }
+
+
 }

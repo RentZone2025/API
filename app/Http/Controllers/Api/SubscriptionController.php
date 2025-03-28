@@ -9,7 +9,8 @@ use Stripe\Price;
 use Stripe\Product;
 use Stripe\Checkout\Session;
 use Laravel\Cashier\Subscription;
-use Stripe\SubscriptionItem;
+use Stripe\Invoice;
+use Stripe\Refund;
 use App\Models\User;
 use Carbon\Carbon;
 
@@ -173,6 +174,23 @@ class SubscriptionController extends Controller
                 'subscription' => $stripeSubscription,
                 'products' => $products,
             ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function cancelSubscription(Request $request)
+    {
+        try {
+            \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
+            $subscription = $request->user()->subscription();
+
+            $subscription->cancelNowAndInvoice();
+
+            $subscription->delete();
+            $subscription->items()->delete();
+
+            return response()->json(['message' => 'Subscription canceled successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
